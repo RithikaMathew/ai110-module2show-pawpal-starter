@@ -42,6 +42,26 @@ The AI initially suggested using Python 3.10+ union type hint syntax (`list[Task
 
 ---
 
+## 3b. AI Strategy (VS Code Copilot)
+
+**Which Copilot features were most effective for building your scheduler?**
+
+Three features stood out. Inline Chat was the most useful day-to-day tool — being able to highlight a method stub and ask "implement this" without leaving the file kept the flow fast and focused. Agent Mode was valuable for larger cross-file changes, like wiring `app.py` to `pawpal_system.py`, because it could read both files and make consistent edits across them at once rather than requiring manual copy-paste between chat and editor. The Generate Tests smart action saved significant time on the test suite — pointing it at `pawpal_system.py` produced a reasonable first draft of all seven test functions that only needed minor adjustments to match the exact method signatures.
+
+**One example of an AI suggestion you rejected or modified:**
+
+When asking Copilot to implement `mark_complete()`, the first suggestion put the recurrence logic entirely inside `Task` — it had `Task` directly calling `pet.add_task()` on itself, which meant `Task` needed a reference to its parent `Pet`. That would have created a circular dependency (`Task` knowing about `Pet`, while `Pet` already holds a list of `Task` objects) and violated the single-responsibility principle. The suggestion was rejected and the design was split: `Task.mark_complete()` only returns the next `Task` instance, and `Scheduler.mark_task_complete()` handles the coordination of adding it back to the pet. This kept `Task` as a pure data object with no knowledge of the classes above it.
+
+**How did using separate chat sessions for different phases help you stay organized?**
+
+Each phase had a different goal and a different mental context. Starting a new chat session for the algorithmic phase (Phase 4) meant the conversation wasn't polluted with earlier UML brainstorming or skeleton scaffolding. When asking Copilot about conflict detection strategy, the responses stayed focused on algorithms rather than drifting back to class design questions that had already been settled. Similarly, opening a fresh session for the testing phase meant Copilot's suggestions were framed around pytest patterns and edge cases rather than implementation details. Without that separation, long chat histories tend to cause AI responses to blend concerns from earlier phases into answers for the current one, which produces muddier suggestions.
+
+**What you learned about being the "lead architect" when collaborating with powerful AI tools:**
+
+The clearest lesson was that AI accelerates execution but cannot replace judgment about structure. Copilot could write a working `detect_conflicts()` method in seconds, but it couldn't decide on its own that conflict detection should return warning strings instead of raising exceptions, or that it should live on `Scheduler` rather than `Pet`. Those decisions required understanding the full system — how the UI would consume the output, what failure mode was acceptable, and how the classes should relate to each other. Every time a vague prompt was used, the output needed significant rework. Every time a precise, architecturally-informed prompt was used, the output was close to final. Being the lead architect means arriving at the AI with a clear design intent and using the tool to fill in the implementation, not to make the design decisions for you.
+
+---
+
 ## 4. Testing and Verification
 
 **a. What you tested**
