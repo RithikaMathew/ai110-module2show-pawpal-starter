@@ -8,19 +8,36 @@
 
 ## Features
 
-- Add an owner and multiple pets (dog, cat, other)
-- Add tasks with time, duration, priority, and frequency (once / daily / weekly)
-- View today's schedule sorted chronologically
-- Conflict warnings when two tasks share the same pet and time slot
-- Automatic recurrence: completing a daily/weekly task schedules the next occurrence
-- Filter tasks by pet name or completion status
+### Owner and Pet Management
+Register an owner and add as many pets as needed, each with a name and species (dog, cat, or other). Pets are stored in the owner's session and persist for the duration of the app session via `st.session_state`.
+
+### Task Scheduling
+Create care tasks — feedings, walks, medications, appointments, or anything else — and assign them to a specific pet. Each task captures:
+- **Title** — what needs to happen
+- **Time** — when it happens, in 24-hour `HH:MM` format
+- **Duration** — how long it takes, in minutes
+- **Priority** — `low`, `medium`, or `high`
+- **Frequency** — `once`, `daily`, or `weekly`
+
+### Chronological Daily Schedule
+The `Scheduler.daily_schedule()` method filters all tasks to those due today that are not yet complete, then sorts them using `Scheduler.sort_by_time()`. Sorting uses Python's built-in `sorted()` with a `lambda t: t.time` key, which correctly orders `HH:MM` strings lexicographically. The result is displayed as a table in the UI so the owner sees their day in time order at a glance.
+
+### Conflict Warnings
+`Scheduler.detect_conflicts()` scans every task and builds a dictionary keyed on `(pet_name, time)`. If a second task maps to the same key, a plain-English warning is generated — for example: `[CONFLICT] 'Feeding' and 'Grooming' both scheduled at 08:00 for Luna`. Warnings appear as `st.warning` banners in the UI above the schedule table so they are impossible to miss. The app never crashes on a conflict — it always reports and continues.
+
+### Automatic Recurrence
+When a task is marked complete, `Task.mark_complete()` sets `completed = True` and checks the task's frequency. For `daily` tasks it returns a new `Task` with `due_date + timedelta(days=1)`; for `weekly` tasks it uses `timedelta(weeks=1)`; for `once` tasks it returns `None`. `Scheduler.mark_task_complete()` receives this return value and, if it is not `None`, immediately calls `pet.add_task()` to register the next occurrence. The UI confirms the next due date with an `st.info` message.
+
+### Filtering
+`Scheduler.filter_tasks()` accepts an optional `pet_name` and an optional `completed` boolean. Either, both, or neither can be supplied — the method chains the filters and returns the matching subset of tasks. This powers the CLI demo and can be extended to drive filter controls in the UI.
 
 ## Smarter Scheduling
 
-- **Sorting by time** — tasks are ordered by `HH:MM` string using Python's `sorted()` with a lambda key
-- **Conflict detection** — the Scheduler scans all tasks and flags any two tasks for the same pet at the same time, returning a human-readable warning instead of crashing
-- **Daily recurrence** — `mark_complete()` on a `daily` task returns a new `Task` with `due_date + timedelta(days=1)`; weekly tasks use `timedelta(weeks=1)`
-- **Filtering** — tasks can be filtered by pet name, completion status, or both
+- **Sorting by time** — `Scheduler.sort_by_time()` uses `sorted()` with `lambda t: t.time`; lexicographic ordering of `HH:MM` strings is equivalent to chronological ordering, so no time parsing is needed
+- **Conflict detection** — `Scheduler.detect_conflicts()` uses a single-pass dictionary scan (`O(n)`) keyed on `(pet_name, time)`; returns human-readable warning strings instead of raising exceptions
+- **Automatic recurrence** — `Task.mark_complete()` returns the next `Task` instance using `timedelta`; `Scheduler.mark_task_complete()` coordinates adding it back to the correct `Pet`
+- **Filtering** — `Scheduler.filter_tasks()` chains `pet_name` and `completed` filters independently so either or both can be applied in one call
+- **Daily schedule** — `Scheduler.daily_schedule()` combines a `due_date == today` filter with `not completed` and then calls `sort_by_time()`, giving a clean one-call API for the UI
 
 ## Setup
 
